@@ -34,7 +34,7 @@ jobs:
         run: yarn lint
 
   fix:
-    if: jobs.lint.result == 'failure'
+    if: failure()
     name: Lint fix with Node 16.x
     runs-on: ubuntu-latest
     steps:
