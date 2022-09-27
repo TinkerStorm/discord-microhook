@@ -22,7 +22,7 @@ const webhook = new Webhook({
   autoFetch: true
 });
 
-webhook.send('Hello, world!');
+webhook.sendMessage('Hello, world!');
 ```
 
 ## Construct from URL
@@ -37,7 +37,7 @@ const webhook = Webhook.from(
   }
 );
 
-webhook.send('Hello, world!');
+webhook.sendMessage('Hello, world!');
 ```
 
 
