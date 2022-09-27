@@ -1,0 +1,53 @@
+name: Node.js Package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout  
+        uses: actions/checkout@v3
+      - name: Run latest-tag
+        uses: EndBug/latest-tag@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docs:
+    needs: tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: SitRep (Checkout)
+        uses: actions/checkout@v2
+
+      - name: Lay the foundations (Setup)
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+      - name: Rent the tools (Dependencies)
+        run: yarn install
+
+      - name: Make a mess (Lint)
+        run: yarn docs
+
+      - name: Seal the deal (Commit)
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: docs
+          message: "chore(docs): actions generated docs"
+
+  publish:
+    needs: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
