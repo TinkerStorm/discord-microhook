@@ -1,50 +1,63 @@
-import { Snowflake, UserData } from "./types.common";
-import { ComponentRow } from "./types.components";
-import { Embed, EmbedOptions } from "./types.embed";
-import { PartialWebhookMessageOptions } from "./types.webhook";
+// #region Imports
 
-export interface MessageData extends SharedMessageData {
+// Local types
+import type { Snowflake, UserData } from "./types.common";
+import type { ComponentRow } from "./types.components";
+import type { Embed, EmbedOptions } from "./types.embed";
+import type { PartialWebhookMessageOptions } from "./types.webhook";
+
+// #endregion
+
+export type MessageData = {
   application_id?: string;
   attachments: AttachmentData[];
   author: UserData;
   channel_id: Snowflake;
-  edited_timestamp: string | null;
-	embeds: Embed[];
+  edited_timestamp: string | undefined;
+  embeds: Embed[];
   id: Snowflake;
   mentions: UserData[];
+  mentions_roles: string[];
   mention_everyone: boolean;
-  pinned: boolean;
+  pinned?: boolean;
   position?: number;
   timestamp: string;
-  type: MessageType;
+  // type: MessageType;
   webhook_id?: string;
-}
+} & SharedMessageData;
 
-export type MessageOptions = EditMessageOptions & RequiredMessageOptionsUnion & PartialWebhookMessageOptions;
+export type MessageOptions = EditMessageOptions &
+  RequiredMessageOptionsUnion &
+  PartialWebhookMessageOptions &
+  Partial<ThreadLikeTarget | { threadName: string }>;
 
-export type EditMessageOptions = Partial<BaseMessageOptions>;
+export type EditMessageOptions = Partial<BaseMessageOptions & ThreadLikeTarget>;
 
-export interface BaseMessageOptions extends SharedMessageData {
-	allowed_mentions: Partial<AllowedMentions>;
+export type BaseMessageOptions = {
+  allowed_mentions: Partial<AllowedMentions>;
   embeds: EmbedOptions[];
   files: FileAttachment[];
   suppressEmbeds?: boolean;
-}
+  threadID?: string;
+  thread_name?: string;
+} & SharedMessageData;
 
-// wait & thread_id are on query string
-export interface SharedMessageData {
-	content: string;
+export type ThreadLikeTarget = { threadID: string };
+
+// Wait & thread_id are on query string
+export type SharedMessageData = {
+  content: string;
   components: ComponentRow[];
   attachments: AttachmentOptions[];
-	tts: boolean;
+  tts: boolean;
   flags?: MessageFlags;
 };
 
-type RequiredMessageOptionsUnion = {content: string} | {embeds: Embed[]} | {files: FileAttachment[]};
-
-export enum MessageType {
-
-}
+/** A series of fields for a message, one of which must be filled out. */
+export type RequiredMessageOptionsUnion =
+  | { content: string }
+  | { embeds: Embed[] }
+  | { files: FileAttachment[] };
 
 /**
  * Only `SUPPRESS_EMBEDS` is supported in MessageOptions#flags
@@ -56,10 +69,10 @@ export enum MessageFlags {
   // Do not include any embeds when serializing this message
   SUPPRESS_EMBEDS = 1 << 2,
   HAS_THREAD = 1 << 5,
-  FAILED_TO_MENTION_SOME_ROLES_IN_THREAD = 1 << 8
-};
+  FAILED_TO_MENTION_SOME_ROLES_IN_THREAD = 1 << 8,
+}
 
-export interface AttachmentData extends AttachmentOptions {
+export type AttachmentData = {
   /** The attachment id. */
   id: Snowflake;
   /** The name of the file attached. */
@@ -80,27 +93,27 @@ export interface AttachmentData extends AttachmentOptions {
   height?: number;
   /** Width of file (if image). */
   width?: number;
-}
+} & AttachmentOptions;
 
-export interface AttachmentOptions {
+export type AttachmentOptions = {
   id: string | number;
   description?: string;
-}
+};
 
-export interface FileAttachment {
+export type FileAttachment = {
   name: string;
   file: Buffer;
-}
+};
 
-export interface AllowedMentions {
+export type AllowedMentions = {
   parse: AllowedMentionType[];
   roles: Snowflake[];
   users: Snowflake[];
   replied_user: boolean;
-}
+};
 
 export enum AllowedMentionType {
   ROLES = "roles",
   USERS = "users",
-  EVERYONE = "everyone"
+  EVERYONE = "everyone",
 }

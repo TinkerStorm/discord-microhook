@@ -1,25 +1,55 @@
-// Local Imports (Constants)
+// Local classes
+import { Webhook } from "./Webhook";
+
+// Local constants & types
 import { ROUTER } from "../util/constants";
+import type {
+  AvatarSize,
+  ImageFormat,
+  UserData,
+  UserFlags,
+} from "../util/types.common";
 
-// Local Imports (Types)
-import type { AvatarSize, ImageFormat, UserData, UserFlags } from "../util/types.common";
-
+/**
+ * Represents a Discord user.
+ *
+ * Webhooks *sometimes* have enough information to determine what type of user the data represents (`~#publicFlags`, `~#avatarDecoration`).
+ */
 export class User {
+  /** The avatar of the user. */
   avatar?: string;
+  /** The avatar decoration of the user (available for user mentions). */
   avatarDecoration?: string;
+  /** Whether the user is a bot. */
   bot: boolean;
+  /** The discriminator of the user. */
   discriminator: string;
+  /** The ID of the user. */
   id: string;
+  /** The username of the user. */
   username: string;
+  /** The public flags that the user has. */
   publicFlags?: UserFlags;
 
-  constructor(user: UserData) {
-    if (user.avatar) this.avatar = user.avatar;
+  constructor(private readonly webhook: Webhook, user: UserData) {
+    // Guaranteed data fields
     this.bot = user.bot;
     this.discriminator = user.discriminator;
     this.id = user.id;
     this.username = user.username;
-    if (user.public_flags) this.publicFlags = user.public_flags;
+
+    // Optional (or null) data fields
+    if (user.avatar) {
+      this.avatar = user.avatar;
+    }
+
+    if (user.public_flags) {
+      this.publicFlags = user.public_flags;
+    }
+
+    if (user.avatar_decoration) {
+      this.avatarDecoration = user.avatar_decoration;
+    }
   }
 
   /**
@@ -37,7 +67,9 @@ export class User {
   }
 
   get avatarURL() {
-    if (!this.avatar) return this.defaultAvatarURL;
+    if (!this.avatar) {
+      return this.defaultAvatarURL;
+    }
 
     const format = this.avatar.startsWith("a_") ? "gif" : "png";
 
@@ -49,9 +81,13 @@ export class User {
   }
 
   dynamicAvatarURL(format: ImageFormat, size: AvatarSize) {
-    if (!this.avatar) return this.defaultAvatarURL;
+    if (!this.avatar) {
+      return this.defaultAvatarURL;
+    }
 
-    if (this.avatar.startsWith("a_")) format = "gif";
+    if (this.avatar.startsWith("a_")) {
+      format = "gif";
+    }
 
     return ROUTER.cdn.avatar(this.id, this.avatar, format, size);
   }

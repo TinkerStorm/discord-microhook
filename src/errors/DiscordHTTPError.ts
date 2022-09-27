@@ -1,5 +1,9 @@
+// #region Imports
+
 // Node Imports
-import { ClientRequest, IncomingMessage } from 'node:http';
+import type { ClientRequest, IncomingMessage } from "node:http";
+
+// #endregion
 
 /** An HTTP error from a request. */
 export class DiscordHTTPError extends Error {
@@ -22,23 +26,32 @@ export class DiscordHTTPError extends Error {
    * @param response Any {@link Server}s response class
    * @param stack The error stack
    */
-  constructor(req: ClientRequest, res: IncomingMessage, response: any, stack: string) {
+  constructor(
+    req: ClientRequest,
+    res: IncomingMessage,
+    response: any,
+    stack: string
+  ) {
     super();
 
     this.req = req;
     this.res = res;
     this.response = response;
-    this.code = res.statusCode as number;
+    this.code = res.statusCode!;
 
     let message = `${res.statusCode} ${res.statusMessage} on ${req.method} ${req.path}`;
     const errors = this.flattenErrors(response);
-    if (errors.length > 0) message += '\n  ' + errors.join('\n  ');
+    if (errors.length > 0) {
+      message += "\n  " + errors.join("\n  ");
+    }
+
     this.message = message;
 
-    if (stack) this.stack = this.name + ': ' + this.message + '\n' + stack;
-    else {
+    if (stack) {
+      this.stack = this.name + ": " + this.message + "\n" + stack;
+    } else {
       // Set stack before capturing to avoid TS error
-      this.stack = '';
+      this.stack = "";
       Error.captureStackTrace(this, DiscordHTTPError);
     }
   }
@@ -47,14 +60,26 @@ export class DiscordHTTPError extends Error {
     return this.constructor.name;
   }
 
-  private flattenErrors(errors: any, keyPrefix = '') {
+  private flattenErrors(errors: any, keyPrefix = "") {
     let messages: string[] = [];
     for (const fieldName in errors) {
-      if (!(fieldName in errors) || fieldName === 'message' || fieldName === 'code') continue;
+      if (
+        !(fieldName in errors) ||
+        fieldName === "message" ||
+        fieldName === "code"
+      ) {
+        continue;
+      }
+
       if (Array.isArray(errors[fieldName])) {
-        messages = messages.concat(errors[fieldName].map((str: string) => `${keyPrefix + fieldName}: ${str}`));
+        messages = messages.concat(
+          errors[fieldName].map(
+            (str: string) => `${keyPrefix + fieldName}: ${str}`
+          )
+        );
       }
     }
+
     return messages;
   }
 }

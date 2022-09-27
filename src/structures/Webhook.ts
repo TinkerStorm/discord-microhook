@@ -1,229 +1,320 @@
 // Node Imports
-import EventEmitter from 'node:events';
+import EventEmitter from "node:events";
 
-// Local Imports (Classes)
-import { Message } from './Message';
-import { RequestHandler } from '../rest/handler';
+// Local classes
+import { Message } from "./Message";
+import { RequestHandler } from "../rest/handler";
 
-// Local Imports (Constants + Enums)
-import { ROUTER } from '../util/constants';
-import { MessageFlags } from '../util/types.message';
-
-// Local Imports (Types)
-import type { EditWebhookOptions, WebhookData, WebhookOptions } from '../util/types.webhook';
-import type { EditMessageOptions, MessageData, MessageOptions } from '../util/types.message';
+// Local constants & types
+import { BASE_URL, ROUTER } from "../util/constants";
+import { MessageFlags, type ThreadLikeTarget } from "../util/types.message";
+import type {
+  EditWebhookOptions,
+  WebhookData,
+  WebhookOptions,
+} from "../util/types.webhook";
+import type {
+  EditMessageOptions,
+  MessageData,
+  MessageOptions,
+} from "../util/types.message";
 
 export class Webhook extends EventEmitter {
-	// protected cache: Map<string, Message> = new Map();
-	protected requestHandler: RequestHandler = new RequestHandler(this);
+  // Protected cache: Map<string, Message> = new Map();
+  /** @hidden */
+  protected requestHandler: RequestHandler;
 
-	public options: WebhookOptions;
+  public options: WebhookOptions;
 
-	public id: string;
-	public token: string;
+  public id: string;
+  public token: string;
 
-	public applicationID?: string;
-	public avatar?: string;
-	protected channelID?: string;
-	public guildID?: string;
-	public name?: string;
+  public applicationID?: string;
+  public avatar?: string;
+  protected channelID?: string;
+  public guildID?: string;
+  public name?: string;
 
-	static from(target: URL | string, options: WebhookOptions): Webhook {
-		if (!(target instanceof URL))
-			target = new URL(target);
+  static from(
+    target: URL | string,
+    options?: Omit<WebhookOptions, "id" | "token">
+  ): Webhook {
+    if (!(target instanceof URL)) {
+      target = new URL(target);
+    }
 
-		const urlValidation = (
-			target.protocol === 'https:' &&
-			target.hostname === 'discord.com' &&
-			target.pathname.startsWith(ROUTER.webhook('', '').base)
-		);
+    if (!options) options = {};
 
-		if (!urlValidation)
-			throw new Error('Invalid webhook URL');
+    const urlValidation =
+      target.protocol === "https:" &&
+      target.hostname === "discord.com" &&
+      (target.pathname.startsWith("/api/webhooks/") ||
+        target.pathname.startsWith(`${BASE_URL}/webhooks`));
 
-		const [id, token] = target.pathname.split('/').slice(3);
+    if (!urlValidation) {
+      throw new Error("Invalid webhook URL");
+    }
 
-		return new Webhook({ ...options, id, token });
-	}
+    const [token, id] = target.pathname.split("/").reverse();
 
-	constructor(options: WebhookOptions) {
-		// Ensure presence of required options
-		if (!options.id || !options.token) throw new Error('Webhook ID and token are required');
+    return new Webhook({ ...options, id, token });
+  }
 
-		super();
+  constructor(options: WebhookOptions) {
+    // Ensure presence of required options
+    if (!options.id || !options.token) {
+      throw new Error("Webhook ID and token are required");
+    }
 
-		this.id = options.id;
-		this.token = options.token;
+    super();
 
-		this.options = Object.assign({
-			agent: null,
-			autoFetch: false,
+    this.id = options.id;
+    this.token = options.token;
 
-		}, options);
+    this.options = {
+      autoFetch: false,
+      ratelimiterOffset: 0,
+      requestTimeout: 15000,
+      ...options,
+    };
 
-		if (this.options.autoFetch) this.fetch();
-	}
+    this.requestHandler = new RequestHandler(this);
 
-	/** @hidden */
-	#patch(data: WebhookData) {
-		if (data.application_id) this.applicationID = data.application_id;
-		if (data.avatar) this.avatar = data.avatar;
-		if (data.name) this.name = data.name;
-		if (data.channel_id) this.channelID = data.channel_id;
-		if (data.guild_id) this.guildID = data.guild_id;
-	}
+    if (this.options.autoFetch) {
+      this.fetch();
+    }
+  }
 
-	#destroy() {
-		this.id = '';
-		this.token = '';
-	}
+  /** @hidden */
+  #patch(data: WebhookData) {
+    if (data.application_id) {
+      this.applicationID = data.application_id;
+    }
 
-	async fetch(): Promise<this> {
-		const data: WebhookData = await this.requestHandler.request('GET', `webhooks/${this.id}/${this.token}`);
+    if (data.avatar) {
+      this.avatar = data.avatar;
+    }
 
-		this.#patch(data);
+    if (data.name) {
+      this.name = data.name;
+    }
 
-		return this;
-	}
+    if (data.channel_id) {
+      this.channelID = data.channel_id;
+    }
 
-	async edit(options: EditWebhookOptions): Promise<this> {
-		if (!options.name && !options.avatar) throw new Error('No valid options were given');
+    if (data.guild_id) {
+      this.guildID = data.guild_id;
+    }
+  }
 
-		const data: WebhookData = await this.requestHandler.request(
-			'PATCH',
-			ROUTER.webhook(this.id, this.token).toString(),
-			false,
-			{
-				avatar: options.avatar,
-				name: options.name
-			}
-		);
+  #destroy() {
+    this.id = "";
+    this.token = "";
+  }
 
-		this.#patch(data);
+  #getThreadTarget(route: string, options: Partial<ThreadLikeTarget>): string {
+    const query = new URLSearchParams({ wait: "true" });
 
-		return this;
-	}
+    if (options.threadID) {
+      query.set("thread_id", options.threadID);
+    }
 
-	/**
-	 * 
-	 * @param id The ID of the message to fetch
-	 * @param threadID The ID of the thread to fetch the message from
-	 * @returns The message
-	 * 
-	 * @future Optional message caching (likely breaking change, to include the possibility of not providing `threadID`)
-	 * 
-	 * Possibility to provide the 2nd argument as an object to allow the bypass to force a request.
-	 * `{ threadID: string, forceFetch: boolean }`
-	 */
-	async fetchMessage(id: string, threadID?: string): Promise<Message> {
-		const route = ROUTER.webhook(this.id, this.token).message(id);
-		const query = new URLSearchParams();
-		if (threadID) query.set('thread_id', threadID);
-		const url = route + '?' + query.toString();
+    return `${route}?${query}`;
+  }
 
-		const data: MessageData = await this.requestHandler.request('GET', url);
+  async fetch(): Promise<this> {
+    const data: WebhookData = await this.requestHandler.request(
+      "GET",
+      ROUTER.api.webhook(this.id, this.token)
+    );
 
-		if (!data) throw new Error(`Message '${id}' not found`);
+    this.#patch(data);
 
-		return new Message(this, data);
-	}
+    return this;
+  }
 
-	// as well as options to override default username and avatar...
-	async send(content: string | MessageOptions, options?: MessageOptions): Promise<Message> {
-		if (typeof content !== 'string') options = content;
-		else if (typeof options !== 'object') options = {} as MessageOptions;
+  async edit(options: EditWebhookOptions): Promise<this> {
+    if (!options.name && !options.avatar) {
+      throw new Error("No valid options were given");
+    }
 
-		if (typeof options !== 'object') throw new Error('Invalid options');
-		options = { ...options };
+    const data: WebhookData = await this.requestHandler.request(
+      "PATCH",
+      ROUTER.api.webhook(this.id, this.token),
+      {
+        avatar: options.avatar,
+        name: options.name,
+      }
+    );
 
-		if (!options.content && typeof content === 'string') options.content = content;
+    this.#patch(data);
 
-		if (!options.content && !options.embeds && !options.files)
-			throw new Error('No content, embeds or files');
+    return this;
+  }
 
-		// Failover to prevent sending components on a user-owned webhook
-		// Only kicks in if the webhook instance has succeeded in fetching it's data
-		if (this.channelID && !this.applicationID && options.components)
-			throw new Error('Cannot send components in a webhook without an application ID');
+  /**
+   *
+   * @param id The ID of the message to fetch
+   * @param threadID The ID of the thread to fetch the message from
+   * @returns The message
+   *
+   * @future Optional message caching (likely breaking change, to include the possibility of not providing `threadID`)
+   *
+   * Possibility to provide the 2nd argument as an object to allow the bypass to force a request.
+   * `{ threadID: string, forceFetch: boolean }`
+   */
+  async fetchMessage(id: string, threadID?: string): Promise<Message> {
+    const route = this.#getThreadTarget(
+      ROUTER.api.webhookMessage(this.id, this.token, id),
+      { threadID }
+    );
 
-		if (options.suppressEmbeds && !options.flags) options.flags = MessageFlags.SUPPRESS_EMBEDS;
+    const data: MessageData = await this.requestHandler.request("GET", route);
 
-		const data: MessageData = await this.requestHandler.request(
-			'POST',
-			ROUTER.webhook(this.id, this.token).toString(),
-			false,
-			{
-				allowed_mentions: options.allowed_mentions,
-				avatar_url: options.avatar_url,
-				components: options.components,
-				content: options.content,
-				embeds: options.embeds,
-				flags: options.flags,
-				tts: options.tts,
-				username: options.username
-			},
-			options.files
-		);
+    if (!data) throw new Error(`Message '${id}' not found`);
 
-		return new Message(this, data);
-	}
+    return new Message(this, data);
+  }
 
-	//async sendSlackMessage(options: any) {
-	//	return this.requestHandler.request('POST', ROUTER.webhook(this.id, this.token).slack(), false, options);
-	//}
+  /**
+   *
+   * @param content The content of the message
+   * @param options The options for the message
+   * @returns The created message
+   */
+  async sendMessage(
+    content: string | MessageOptions,
+    options?: MessageOptions
+  ): Promise<Message> {
+    if (typeof content !== "string") options = content;
+    else if (typeof options !== "object") options = {} as MessageOptions;
 
-	//async sendGitHubMessage(options: any) {
-	//	return this.requestHandler.request('POST', ROUTER.webhook(this.id, this.token).github(), false, options);
-	//}
+    if (typeof options !== "object") throw new Error("Invalid options");
 
-	// option to check cache before sending, or force request
-	async editMessage(messageID: string, content: string | EditMessageOptions, options?: EditMessageOptions): Promise<Message> {
-		if (typeof content !== 'string') options = content;
-		else if (typeof options !== 'object') options = {} as EditMessageOptions;
+    options = { ...options };
 
-		if (!options.content && !options.embeds && !options.components && !options.files && !options.attachments)
-			throw new Error('No valid options were given');
+    if (!options.content && typeof content === "string")
+      options.content = content;
 
-		const data: MessageData = await this.requestHandler.request(
-			'PATCH',
-			ROUTER.webhook(this.id, this.token).message(messageID),
-			false,
-			{
-				attachments: options.attachments,
-				allowed_mentions: options.allowed_mentions,
-				components: options.components,
-				content: options.content,
-				embeds: options.embeds,
-				flags: options.flags
-			},
-			options.files
-		);
+    if (!options.content && !options.embeds && !options.files)
+      throw new Error("No content, embeds or files");
 
-		return new Message(this, data);
-	}
+    if (options.threadID && options.thread_name)
+      throw new Error(
+        "Cannot create a thread (thread_name) and send to an existing one (threadID)."
+      );
 
-	// option to check cache before sending, or force request
-	async deleteMessage(messageID: string, reason?: string) {
-		await this.requestHandler.request(
-			'DELETE',
-			ROUTER.webhook(this.id, this.token).message(messageID),
-			false,
-			{},
-			undefined,
-			reason
-		);
-	}
+    // Failover to prevent sending components on a user-owned webhook
+    // Only kicks in if the webhook instance has succeeded in fetching it's data
+    if (this.channelID && !this.applicationID && options.components) {
+      throw new Error(
+        "Cannot send components in a webhook without an application ID"
+      );
+    }
 
-	async delete(reason?: string) {
-		await this.requestHandler.request(
-			'DELETE',
-			ROUTER.webhook(this.id, this.token).toString(),
-			false,
-			{},
-			undefined,
-			reason
-		);
+    if (options.suppressEmbeds && !options.flags)
+      options.flags = MessageFlags.SUPPRESS_EMBEDS;
 
-		this.#destroy();
-	}
+    const route = this.#getThreadTarget(
+      ROUTER.api.webhook(this.id, this.token),
+      { threadID: options.threadID }
+    );
+
+    const data: MessageData = await this.requestHandler.request(
+      "POST",
+      route,
+      {
+        allowed_mentions: options.allowed_mentions,
+        avatar_url: options.avatar_url,
+        components: options.components,
+        content: options.content,
+        embeds: options.embeds,
+        flags: options.flags,
+        tts: options.tts,
+        username: options.username,
+        thread_name: options.thread_name,
+      },
+      options.files
+    );
+
+    return new Message(this, data);
+  }
+
+  // Async sendSlackMessage(options: any) {
+  //	return this.requestHandler.request('POST', ROUTER.webhook(this.id, this.token).slack(), false, options);
+  // }
+
+  // async sendGitHubMessage(options: any) {
+  //	return this.requestHandler.request('POST', ROUTER.webhook(this.id, this.token).github(), false, options);
+  // }
+
+  // option to check cache before sending, or force request
+  async editMessage(
+    messageID: string,
+    content: string | EditMessageOptions,
+    options?: EditMessageOptions
+  ): Promise<Message> {
+    if (typeof content !== "string") {
+      options = content;
+    } else if (typeof options !== "object") {
+      options = {} as EditMessageOptions;
+    }
+    if (
+      !options.content &&
+      !options.embeds &&
+      !options.components &&
+      !options.files &&
+      !options.attachments
+    ) {
+      throw new Error("No valid options were given");
+    }
+
+    const route = this.#getThreadTarget(
+      ROUTER.api.webhookMessage(this.id, this.token, messageID),
+      options
+    );
+
+    const data: MessageData = await this.requestHandler.request(
+      "PATCH",
+      route,
+      {
+        attachments: options.attachments,
+        allowed_mentions: options.allowed_mentions,
+        components: options.components,
+        content: options.content,
+        embeds: options.embeds,
+        flags: options.flags,
+      },
+      options.files
+    );
+
+    return new Message(this, data);
+  }
+
+  // Option to check cache before sending, or force request
+  async deleteMessage(messageID: string, threadID?: string) {
+    const query = new URLSearchParams();
+    if (threadID) query.set("thread_id", threadID);
+
+    const route = this.#getThreadTarget(
+      ROUTER.api.webhookMessage(this.id, this.token, messageID),
+      { threadID }
+    );
+
+    await this.requestHandler.request("DELETE", route);
+  }
+
+  /**
+   * This removes the webhook from the channel, and makes the class instance unusable from this point.
+   * @returns void
+   */
+  async delete() {
+    await this.requestHandler.request(
+      "DELETE",
+      ROUTER.api.webhook(this.id, this.token)
+    );
+
+    this.#destroy();
+  }
 }

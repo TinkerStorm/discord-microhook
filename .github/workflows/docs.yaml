@@ -1,0 +1,35 @@
+name: Generate Documentation
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**.ts"
+      - ".github/workflows/docs.yaml"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docs:
+    name: Generate docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: SitRep (Checkout)
+        uses: actions/checkout@v2
+
+      - name: Lay the foundations (Setup)
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+      - name: Rent the tools (Dependencies)
+        run: yarn install
+
+      - name: Make a mess (Lint)
+        run: yarn docs
+
+      - name: Seal the deal (Commit)
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: docs
+          message: "chore(docs): actions generated docs"

@@ -1,0 +1,58 @@
+name: ESLint
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**.ts"
+      - ".eslintrc.json"
+      - ".github/workflows/lint.yaml"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [16.x, 18.x]
+    runs-on: ubuntu-latest
+    name: Checkup with Node ${{ matrix.node-version }}
+    steps:
+      - name: SitRep (Checkout)
+        uses: actions/checkout@v2
+
+      - name: Acquire the tools (Setup v${{ matrix.node-version }})
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Pull in the resources (Dependencies)
+        run: yarn install
+
+      - name: Perform checkup (Lint)
+        run: yarn lint
+
+  fix:
+    if: jobs.lint.result == 'failure'
+    name: Lint fix with Node 16.x
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the chart (Checkout)
+        uses: actions/checkout@v2
+
+      - name: Acquire the tools (Setup)
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+      - name: Call-in the troops (Dependencies)
+        run: yarn install
+
+      - name: Perform the fix (lint:fix)
+        run: yarn lint:fix
+
+      - name: Seal the deal (Commit)
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: src
+          message: "chore(lint): actions linted code"

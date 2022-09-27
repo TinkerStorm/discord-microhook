@@ -2,18 +2,18 @@
  * Ratelimit requests and release in sequence.
  * @private
  */
- export class SequentialBucket {
+export class SequentialBucket {
   /** How many tokens the bucket can consume in the current interval. */
   limit: number;
   /** Whether the queue is being processed. */
-  processing: boolean = false;
+  processing = false;
   /** How many tokens the bucket has left in the current interval. */
   remaining: number;
   /** Timestamp of next reset. */
-  reset: number = 0;
+  reset = 0;
 
-  private latencyRef: MinimalLatencyRef;
-  private _queue: CallbackFunction[] = [];
+  private readonly latencyRef: MinimalLatencyRef;
+  private readonly _queue: CallbackFunction[] = [];
   private processingTimeout: any;
 
   /**
@@ -35,17 +35,21 @@
         clearTimeout(this.processingTimeout);
         this.processing = false;
       }
+
       return;
     }
+
     if (this.processing && !override) {
       return;
     }
+
     const now = Date.now();
     const offset = this.latencyRef.latency + (this.latencyRef.offset || 0);
     if (!this.reset || this.reset < now - offset) {
       this.reset = now - offset;
       this.remaining = this.limit;
     }
+
     if (this.remaining <= 0) {
       this.processingTimeout = setTimeout(() => {
         this.processing = false;
@@ -53,9 +57,10 @@
       }, Math.max(0, (this.reset || 0) - now + offset) + 1);
       return;
     }
+
     --this.remaining;
     this.processing = true;
-    (this._queue.shift() as CallbackFunction)(() => {
+    this._queue.shift()!(() => {
       if (this._queue.length > 0) {
         this.check(true);
       } else {
@@ -74,20 +79,21 @@
     } else {
       this._queue.push(func);
     }
+
     this.check();
   }
 
   toString() {
-    return '[SequentialBucket]';
+    return "[SequentialBucket]";
   }
 }
 
 /** @hidden */
-export interface MinimalLatencyRef {
+export type MinimalLatencyRef = {
   /** Interval between consuming tokens. */
   latency: number;
   offset?: number;
-}
+};
 
 /** @hidden */
 type CallbackFunction = (callback: () => void) => unknown;

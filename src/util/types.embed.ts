@@ -1,4 +1,4 @@
-export interface Embed extends Omit<EmbedOptions, 'type'> {
+export interface Embed extends Omit<EmbedOptions, "type"> {
   type: EmbedType;
   footer?: EmbedFooter;
   image?: EmbedImageCommon;
@@ -34,16 +34,16 @@ export interface EmbedOptions {
 
 /** @deprecated */
 export enum EmbedType {
-  RICH = 'rich',
-  IMAGE = 'image',
-  VIDEO = 'video',
-  GIFV = 'gifv',
-  ARTICLE = 'article',
-  LINK = 'link'
+  RICH = "rich",
+  IMAGE = "image",
+  VIDEO = "video",
+  GIFV = "gifv",
+  ARTICLE = "article",
+  LINK = "link",
 }
 
 /** Data shared between embed media elements. */
-interface ImageCommon {
+export interface ImageCommon {
   /** The height of the media element. */
   height?: number;
   /** The width of the media element. */
@@ -86,14 +86,14 @@ export interface EmbedAuthor extends EmbedAuthorOptions {
   proxy_icon_url?: string;
 }
 
-export interface EmbedField {
+export type EmbedField = {
   /** The name of the field. */
   name: string;
   /** The value of the field. */
   value: string;
   /** Whether or not this field should display inline. */
   inline?: boolean;
-}
+};
 
 export interface EmbedProvider {
   /** The name of the provider. */

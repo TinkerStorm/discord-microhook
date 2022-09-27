@@ -1,5 +1,9 @@
+// #region Imports
+
 // Node Imports
-import { ClientRequest, IncomingMessage } from 'node:http';
+import type { ClientRequest, IncomingMessage } from "node:http";
+
+// #endregion
 
 /** An Discord error from a request. */
 export class DiscordRESTError extends Error {
@@ -22,26 +26,36 @@ export class DiscordRESTError extends Error {
    * @param response Any {@link Server}s response class
    * @param stack The error stack
    */
-  constructor(req: ClientRequest, res: IncomingMessage, response: any, stack: string) {
+  constructor(
+    req: ClientRequest,
+    res: IncomingMessage,
+    response: any,
+    stack: string
+  ) {
     super();
 
     this.req = req;
     this.res = res;
     this.response = response;
-    this.code = res.statusCode as number;
+    this.code = res.statusCode!;
 
-    let message = response.message || 'Unknown error';
-    if (response.errors) message += '\n  ' + this.flattenErrors(response.errors).join('\n  ');
-    else {
+    let message = response.message || "Unknown error";
+    if (response.errors) {
+      message += "\n  " + this.flattenErrors(response.errors).join("\n  ");
+    } else {
       const errors = this.flattenErrors(response);
-      if (errors.length > 0) message += '\n  ' + errors.join('\n  ');
+      if (errors.length > 0) {
+        message += "\n  " + errors.join("\n  ");
+      }
     }
+
     this.message = message;
 
-    if (stack) this.stack = this.name + ': ' + this.message + '\n' + stack;
-    else {
+    if (stack) {
+      this.stack = this.name + ": " + this.message + "\n" + stack;
+    } else {
       // Set stack before capturing to avoid TS error
-      this.stack = '';
+      this.stack = "";
       Error.captureStackTrace(this, DiscordRESTError);
     }
   }
@@ -50,22 +64,36 @@ export class DiscordRESTError extends Error {
     return `${this.constructor.name} [${this.code}]`;
   }
 
-  private flattenErrors(errors: any, keyPrefix = '') {
+  private flattenErrors(errors: any, keyPrefix = "") {
     let messages: string[] = [];
     for (const fieldName in errors) {
-      if (!(fieldName in errors) || fieldName === 'message' || fieldName === 'code') {
+      if (
+        !(fieldName in errors) ||
+        fieldName === "message" ||
+        fieldName === "code"
+      ) {
         continue;
       }
+
       if (errors[fieldName]._errors) {
         messages = messages.concat(
-          errors[fieldName]._errors.map((obj: any) => `${keyPrefix + fieldName}: ${obj.message}`)
+          errors[fieldName]._errors.map(
+            (obj: any) => `${keyPrefix + fieldName}: ${obj.message}`
+          )
         );
       } else if (Array.isArray(errors[fieldName])) {
-        messages = messages.concat(errors[fieldName].map((str: string) => `${keyPrefix + fieldName}: ${str}`));
-      } else if (typeof errors[fieldName] === 'object') {
-        messages = messages.concat(this.flattenErrors(errors[fieldName], keyPrefix + fieldName + '.'));
+        messages = messages.concat(
+          errors[fieldName].map(
+            (str: string) => `${keyPrefix + fieldName}: ${str}`
+          )
+        );
+      } else if (typeof errors[fieldName] === "object") {
+        messages = messages.concat(
+          this.flattenErrors(errors[fieldName], keyPrefix + fieldName + ".")
+        );
       }
     }
+
     return messages;
   }
 }

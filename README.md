@@ -1,51 +1,73 @@
 # discord-microhook
 A micro package for making use of Discord's webhook infrastructure. This package is designed to be as simple as possible, and is not intended to be a full-featured Discord API wrapper.
 
-It's design is intended to be as minimal as possible, but still includes the.
+It's design is intended to be as minimal as possible, but still includes the ability to send string content and embeds alongside file attachments.
+
+[Documentation](https://tinkerstorm.github.io/discord-microhook)
+
+## Regular Usage
+
+```js
+import { Webhook } from 'discord-microhook';
+
+const webhook = new Webhook({
+  id: '1234567890',
+  token: 'abcdefg',
+  autoFetch: true
+});
+
+webhook.send('Hello, world!');
+```
+
+## Construct from URL
+
+```js
+import { Webhook } from 'discord-microhook';
+
+const webhook = Webhook.from(
+  'https://discordapp.com/api/webhooks/1234567890/abcdefg',
+  {
+    autoFetch: true
+  }
+);
+
+webhook.send('Hello, world!');
+```
+
 
 ## Justification
 
 Discord's webhook infrastructure is a great way to send messages to a channel without having to worry about authentication. Other packages are either mainstream (utilizing the entirety of the Discord API) or would fail to comply with Discord's rate limit and file handling specifications. This package is meant to be a simple, lightweight alternative to other packages - while supporting as much as possible within the scope of [Webhooks](https://discord.dev/resources/webhook) **without an app token**.
 
+> While it does retain attributes or design qualities of the libraries it was inspired by, **it will not** follow their design patterns nor will it permit cross-package compatibility immediately out of the box. This has been seen, time and time again on [`slash-create`'s issue tracker](https://github.com/Snazzah/slash-create/issues?q=is%3Aissue+discord.js+is%3Aclosed), and is not something I wish to repeat. *Issues and PRs regarding this will be closed, with a link to this section.*
+
 ### Supporting forum channels
 
 The support of forum channels for webhooks is rather limited with what Discord provides to the package (when only using a webhook token).
 
-## API
+- When sending a message to a forum channel, `thread_name` **must** be provided - the library has no way to determine what type of channel it is targeting.
+- After the first message is sent as the initial message to a post, this library **cannot** change it's title, close or lock the thread by itself.
 
-### `Webhook`
+### Request authentication changes
 
-- `Webhook.from(url, options)`
-- `new Webhook(options)`
-- `Webhook~id`
-- `Webhook~token`
-- `Webhook#delete(reason?): void`
-- `Webhook#getMessage(id, forceFetch = false): Message | null`
-  > `...#fetchMessage` instead?
-- `Webhook#createMessage(options): Message` - options to override avatar and username should be added somewhere...
-- `Webhook#deleteMessage(id, reason?): void`
-  > An argument to check for the message before removing? - Only check cache if it exists already? ... Or not at all?
-- `Webhook#editMessage(id, options): Message`
+- `RequestHandler` has been patched further for specifc use in this library to accept a `token` in it's `#request` method, rather than a boolean to specify if it should use the token it would have retrieved from the client instance. It is your responsibility as an developer / engineer that the token provided has the correct prefix.
+- The `token: string` argument replaces `auth: boolean` and is placed after the `file` argument in the request handler, as it is not required for any request - but may still be used by itself in unique circumstances (i.e. requesting data outside the scope of the library - i.e. guilds, reactions, channels).
 
-### `Message`
-
-- `new Message(#webhook, message)`
-- `Message~id`
-- `Message~content`
-- `Message#edit(options): Message`
-- `Message#delete(reason)`
-
-## Intended Architecture
+### Intended Architecture
 
 - Remain as simple as possible.
   > The primary motivation is to provide a way into a lighter package that handles exactly what it is designed for. Caching is a possibility, but not a primary focus (so if it is added, **it would be added as an opt-in** to increase certainty about memory usage).
-- Only focus on webhook architecture.
-  > There's a lot of packages that want to cover the entire route network for Discord's API. Everything from Interactions to Invites.
-- Universal file handling and content type
-  > If the payload has an attachment, the library should be programmed with the adaptability in mind to handle the change to a multipart request.
-- Use of the latest version possible will be forced regardless of the options / url provided.
-- `thread_id` & `thread_name` handling
-- Should use of `wait=true` be forced?
+- (`Webhook#send`) Use of `wait=true` is forced, the library does not support an argument to disable it.
+- If `thread_name` and `threadID` are both provided in the options to create a new message in a forum channel, the method will throw a `TypeError`.
+
+## Future
+
+- Message caching
+  > It is currently impossible to *patch* Message instances without having to cache them in the first place. This is a possibility, but not a priority.
+- Parallel ratelimit handling (i.e. providing a base request bucket to extend from for services like Redis or KeyDB)
+  > The integration here would likely require an asynchronous bucket (as well as additional methods to handle the values it keeps in memory), and would be opt-in (SequentialBucket would continue to be the default, and extend from this 'BaseBucket' in some way).
+- Test suite ([#3](https://github.com/TinkerStorm/discord-microhook/issues/3))
+  > Given the smaller size of this package, it is not a priority to have a test suite. However, it is something that may be added in the future for confidence and peace of mind in it's certainty.
 
 ---
 
