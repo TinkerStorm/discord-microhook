@@ -7,7 +7,6 @@
   "repository": "https://github.com/TinkerStorm/discord-microhook",
   "author": "Junior <sudojunior@outlook.com>",
   "license": "MIT",
-  "private": true,
   "scripts": {
     "build": "npx rimraf lib && npx tsc",
     "lint": "npx eslint . --ext .ts",
