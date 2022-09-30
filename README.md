@@ -1,4 +1,10 @@
 # discord-microhook
+
+[![ESLint](https://github.com/TinkerStorm/discord-microhook/actions/workflows/lint.yaml/badge.svg)](https://github.com/TinkerStorm/discord-microhook/actions/workflows/lint.yaml)
+[![DeepScan](https://badgen.net/deepscan/grade/team/16068/project/22443/branch/662131)]()
+[![Discord](https://badgen.net/discord/online-members/Bb3JQQG)](https://discord.gg/Bb3JQQG)
+[![TypeScript](https://badgen.net/badge/icon/typescript?icon=typescript&label&color=007ACC)]()
+
 A micro package for making use of Discord's webhook infrastructure. This package is designed to be as simple as possible, and is not intended to be a full-featured Discord API wrapper.
 
 It's design is intended to be as minimal as possible, but still includes the ability to send string content and embeds alongside file attachments.
@@ -16,7 +22,7 @@ const webhook = new Webhook({
   autoFetch: true
 });
 
-webhook.send('Hello, world!');
+webhook.sendMessage('Hello, world!');
 ```
 
 ## Construct from URL
@@ -31,7 +37,7 @@ const webhook = Webhook.from(
   }
 );
 
-webhook.send('Hello, world!');
+webhook.sendMessage('Hello, world!');
 ```
 
 
