@@ -55,7 +55,7 @@ export type SharedMessageData = {
 /** A series of fields for a message, one of which must be filled out. */
 export type RequiredMessageOptionsUnion =
   | { content: string }
-  | { embeds: Embed[] }
+  | { embeds: EmbedOptions[] }
   | { files: FileAttachment[] };
 
 /**
