@@ -29,7 +29,7 @@ export type MessageData = {
 export type MessageOptions = EditMessageOptions &
   RequiredMessageOptionsUnion &
   Partial<PartialWebhookMessageOptions> &
-  Partial<ThreadLikeTarget | { thread_name: string }>;
+  Partial<ThreadLikeTarget | { thread_name?: string }>;
 
 export type EditMessageOptions = Partial<BaseMessageOptions>;
 
