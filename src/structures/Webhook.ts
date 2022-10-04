@@ -200,6 +200,7 @@ export class Webhook extends EventEmitter {
     if (!options.content && !options.embeds && !options.files)
       throw new Error("No content, embeds or files");
 
+    // @ts-expect-error
     if (options.threadID && options.thread_name)
       throw new Error(
         "Cannot create a thread (thread_name) and send to an existing one (threadID)."
@@ -233,6 +234,7 @@ export class Webhook extends EventEmitter {
         flags: options.flags,
         tts: options.tts,
         username: options.username,
+        // @ts-expect-error
         thread_name: options.thread_name,
       },
       options.files

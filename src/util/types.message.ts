@@ -28,19 +28,18 @@ export type MessageData = {
 
 export type MessageOptions = EditMessageOptions &
   RequiredMessageOptionsUnion &
-  PartialWebhookMessageOptions &
-  Partial<ThreadLikeTarget | { threadName: string }>;
+  Partial<PartialWebhookMessageOptions> &
+  Partial<ThreadLikeTarget | { thread_name?: string }>;
 
-export type EditMessageOptions = Partial<BaseMessageOptions & ThreadLikeTarget>;
+export type EditMessageOptions = Partial<BaseMessageOptions>;
 
 export type BaseMessageOptions = {
   allowed_mentions: Partial<AllowedMentions>;
   embeds: EmbedOptions[];
   files: FileAttachment[];
   suppressEmbeds?: boolean;
-  threadID?: string;
-  thread_name?: string;
-} & SharedMessageData;
+} & SharedMessageData &
+  Partial<ThreadLikeTarget>;
 
 export type ThreadLikeTarget = { threadID: string };
 
@@ -56,7 +55,7 @@ export type SharedMessageData = {
 /** A series of fields for a message, one of which must be filled out. */
 export type RequiredMessageOptionsUnion =
   | { content: string }
-  | { embeds: Embed[] }
+  | { embeds: EmbedOptions[] }
   | { files: FileAttachment[] };
 
 /**
