@@ -31,7 +31,7 @@ export class Webhook extends EventEmitter {
 
   public applicationID?: string;
   public avatar?: string;
-  protected channelID?: string;
+  public channelID?: string;
   public guildID?: string;
   public name?: string;
 
