@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Acquire the tools (Setup v${{ matrix.node-version }})
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
       - name: Pull in the resources (Dependencies)
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Acquire the tools (Setup)
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
       - name: Call-in the troops (Dependencies)
