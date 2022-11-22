@@ -52,7 +52,7 @@ jobs:
         run: yarn lint:fix
 
       - name: Seal the deal (Commit)
-        uses: EndBug/add-and-commit@v7
+        uses: EndBug/add-and-commit@v9
         with:
           add: src
           message: "chore(lint): actions linted code"
