@@ -19,6 +19,7 @@ import type {
 
 export class Message {
   readonly _webhook: Webhook;
+  #inThread: boolean;
 
   /** The ID of the message. */
   readonly id: string;
@@ -66,8 +67,9 @@ export class Message {
   /** The webhook that sent the message. */
   webhookID?: string;
 
-  constructor(webhook: Webhook, data: MessageData) {
+  constructor(webhook: Webhook, data: MessageData, inThread = false) {
     this._webhook = webhook;
+    this.#inThread = inThread;
 
     this.id = data.id;
 
@@ -162,6 +164,14 @@ export class Message {
     content: string | EditMessageOptions,
     options: EditMessageOptions
   ): Promise<Message> {
+    if (this.#inThread) {
+      if (typeof content === "object") {
+        content = { ...content, threadID: this.channelID };
+      } else {
+        options = { ...options, threadID: this.channelID };
+      }
+    }
+
     const data = await this._webhook.editMessage(this.id, content, options);
 
     this._patch(data);
@@ -174,7 +184,10 @@ export class Message {
    * @returns void
    */
   async delete(): Promise<void> {
-    this._webhook.deleteMessage(this.id, this.channelID);
+    await this._webhook.deleteMessage(
+      this.id,
+      this.#inThread ? this.channelID : undefined
+    );
     this.#destroy();
   }
 }
