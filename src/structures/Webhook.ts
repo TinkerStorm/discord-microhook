@@ -174,7 +174,7 @@ export class Webhook extends EventEmitter {
 
     if (!data) throw new Error(`Message '${id}' not found`);
 
-    return new Message(this, data);
+    return new Message(this, data, !!threadID);
   }
 
   /**
@@ -240,7 +240,8 @@ export class Webhook extends EventEmitter {
       options.files
     );
 
-    return new Message(this, data);
+    const inThread = !!("threadID" in options || "thread_name" in options);
+    return new Message(this, data, inThread);
   }
 
   // Async sendSlackMessage(options: any) {
@@ -291,7 +292,8 @@ export class Webhook extends EventEmitter {
       options.files
     );
 
-    return new Message(this, data);
+    const inThread = !!("threadID" in options);
+    return new Message(this, data, inThread);
   }
 
   // Option to check cache before sending, or force request
