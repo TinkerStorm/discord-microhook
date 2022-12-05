@@ -21,7 +21,7 @@ jobs:
     name: Checkup with Node ${{ matrix.node-version }}
     steps:
       - name: SitRep (Checkout)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Acquire the tools (Setup v${{ matrix.node-version }})
         uses: actions/setup-node@v3
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Read the chart (Checkout)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Acquire the tools (Setup)
         uses: actions/setup-node@v3
